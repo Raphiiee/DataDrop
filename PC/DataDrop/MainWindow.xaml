@@ -7,7 +7,7 @@
         xmlns:viewModel="clr-namespace:DataDrop.MVVM.ViewModel"
         mc:Ignorable="d"
         Title="Drip Drop Your Data Is On The Flop" Height="450" Width="800"
-        Background="#393E46"
+        Background="#222831"
         SnapsToDevicePixels="True">
     <Window.DataContext>
         <viewModel:MainViewModel/>

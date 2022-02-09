@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:DataDrop.MVVM.View"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Background="#00ADB5">
+    <Grid Background="#5F7AED">
             
     </Grid>
 </UserControl>
