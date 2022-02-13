@@ -10,7 +10,10 @@
              <ResourceDictionary.MergedDictionaries>
                  <ResourceDictionary Source="Theme/MenuButtonTheme.xaml"/>
                  <ResourceDictionary Source="Theme/ButtonTheme.xaml"/>
-                 <ResourceDictionary Source="Theme/TextBoxTheme.xaml"/>
+                 <ResourceDictionary Source="Theme/SendTextBoxTheme.xaml"/>
+                 <ResourceDictionary Source="Theme/ReceiveTextBoxTheme.xaml"/>
+                 <ResourceDictionary Source="Theme/IPTextBoxTheme.xaml"/>
+                 <ResourceDictionary Source="Theme/PortTextBoxTheme.xaml"/>
              </ResourceDictionary.MergedDictionaries>
 
              <DataTemplate DataType="{x:Type viewModel:OptionsViewModel}">
