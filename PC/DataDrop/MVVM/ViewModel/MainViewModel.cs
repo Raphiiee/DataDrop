@@ -1,4 +1,6 @@
-﻿using DataDrop.Core;
+﻿using System.Windows.Input;
+using DataDrop.BusinessLayer;
+using DataDrop.Core;
 
 namespace DataDrop.MVVM.ViewModel
 {
@@ -11,7 +13,6 @@ namespace DataDrop.MVVM.ViewModel
         public RelayCommand OptionsViewCommand {get; set;}
         public RelayCommand ReceiveViewCommand {get; set;}
         public RelayCommand SendViewCommand {get; set;}
-
         public object CurrentView
         {
             get { return _currentView; }
@@ -21,6 +22,8 @@ namespace DataDrop.MVVM.ViewModel
                 OnPropertyChanged();
             }
         }
+
+        public ServerHandler ServerHandler { get; set; }
 
         public MainViewModel()
         {
@@ -44,5 +47,8 @@ namespace DataDrop.MVVM.ViewModel
                 CurrentView = SendVM;
             });
         }
+
+
+
     }
 }
