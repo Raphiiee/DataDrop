@@ -30,7 +30,7 @@ namespace DataDrop.Models
         {
             if (_extension != null)
             {
-                _response.ContentType = $"Content-Type: application/{_extension.ToLower()}\n";
+                _response.ContentType = $"Content-Type: application/{_extension[1..].ToLower()}\n";
             }
             _response.ContentLength = $"Content-Length: {_response.Message.Length}\n";
             _response.Header = _response.Version
@@ -113,12 +113,20 @@ namespace DataDrop.Models
         public void Error()
         {
             _response.Status = "403 Forbidde\n";
+
             _response.Message = "Wrong Path or Method";
         }
 
         public void SendData(string filePath)
         {
+            if (filePath.Contains("."))
+            {
+                _extension = filePath[filePath.IndexOf(".", StringComparison.Ordinal)..];
+            }
 
+            
+
+            int i = 0;
         }
 
         public void ReceiveData(string filePath)

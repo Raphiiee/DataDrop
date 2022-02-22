@@ -19,7 +19,7 @@ namespace DataDrop.MVVM.ViewModel
             }
             else
             {
-                ServerHandler.Start("");
+                ServerHandler.Start();
             }
         }
     }
