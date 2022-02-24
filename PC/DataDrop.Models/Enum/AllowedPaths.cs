@@ -3,7 +3,8 @@
     public enum AllowedPaths
     {
         SendData = 0,
-        ReceiveData,
+        DataInformation,
+        ClientFinsihed,
         Error
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Printing;
 using System.Text;
 using System.Threading.Tasks;
 using DataDrop.Models.Enum;
@@ -28,14 +29,7 @@ namespace DataDrop.Models
 
         public void StopServerListener()
         {
-            /*HttpClient _httpClient = new HttpClient()
-            {
-                BaseAddress = new Uri("http://localhost:49153")
-            };
-
-            var result = await _httpClient.GetAsync("/Stop");
-            //_serverListener.Stop();
-            IsRunning = false;*/
+            // Function to stop here
             _socket.Close();
         }
 
@@ -76,7 +70,8 @@ namespace DataDrop.Models
         private static void HandleAcceptedClient(IAsyncResult asyncResult)
         {
             Socket clientSocket = (Socket)asyncResult.AsyncState;
-            TcpHandler handler = new TcpHandler();
+            TcpHandler handler = new TcpHandler(_filepath, _buffer.Length);
+            bool isSendingFileData = false;
 
             if (clientSocket == null)
             {
@@ -90,18 +85,23 @@ namespace DataDrop.Models
                 byte[] databuffer = new byte[lengthReceived];
                 Array.Copy(_buffer, databuffer, lengthReceived);
 
-                string rawRequest = Encoding.ASCII.GetString(databuffer);
+                string rawRequest = Encoding.ASCII.GetString(databuffer).ToUpper();
 
                 handler.ProcessData(rawRequest);
 
                 // Check which path & method was sent
                 if (handler.GetMethod() == AllowedMethods.GET && handler.GetPath() == AllowedPaths.SendData)
                 {
-                    handler.SendData(_filepath);
+                    
+                    isSendingFileData = true;
                 }
-                else if (handler.GetMethod() == AllowedMethods.POST && handler.GetPath() == AllowedPaths.ReceiveData)
+                else if (handler.GetMethod() == AllowedMethods.GET && handler.GetPath() == AllowedPaths.DataInformation)
                 {
-                    handler.ReceiveData(_filepath);
+                    handler.DataInformationJSON();
+                }
+                else if (handler.GetMethod() == AllowedMethods.GET && handler.GetPath() == AllowedPaths.ClientFinsihed)
+                {
+                    handler.ClientFinished();
                 }
                 else
                 {
@@ -111,9 +111,17 @@ namespace DataDrop.Models
                 // Create header for response
                 handler.CreateResponseHeader();
                 // make header ready for sending back
-                Byte[] replyData = Encoding.ASCII.GetBytes(handler.GetResponseHeader());
-                clientSocket.BeginSend(replyData, 0, replyData.Length, SocketFlags.None,
-                    new AsyncCallback(SendCallback), clientSocket);
+                byte[] replyData = new byte[_buffer.Length];
+                if (isSendingFileData)
+                {
+                    replyData = handler.SendData();
+                }
+                else
+                {
+                    replyData = Encoding.ASCII.GetBytes(handler.GetResponseHeader());
+                }
+               
+                clientSocket.BeginSend(replyData, 0, replyData.Length, SocketFlags.None, SendCallback, clientSocket);
                 Console.WriteLine($"Sending Back: {handler.GetResponseHeader()}");
 
             }
