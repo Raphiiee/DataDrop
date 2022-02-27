@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -37,17 +38,12 @@ namespace DataDrop.Models
         {
             try
             {
-                IPAddress localIpAddress = IPAddress.Parse(_ip);
-                // Binding socket to ip & port
-                _socket.Bind(new IPEndPoint(localIpAddress, _port));
+                Console.WriteLine("Setting up Server ...");
+                _socket.Bind(new IPEndPoint(IPAddress.Any, 49153));
                 _socket.Listen(5);
-                _socket.ReceiveTimeout = 100;
-                _socket.SendTimeout = 100;
-                // Configure max buffer size 8kb
-                _socket.ReceiveBufferSize = 8_192;
-                _socket.SendBufferSize = 8_192; 
-                IsRunning = true;
-                _socket.BeginAccept(AcceptCallback, null);
+                _socket.ReceiveBufferSize = 10_000;
+                _socket.SendBufferSize = 10_000; 
+                _socket.BeginAccept(new AsyncCallback(AcceptCallback), null);
             }
             catch (Exception e)
             {
@@ -59,18 +55,18 @@ namespace DataDrop.Models
 
         private static void AcceptCallback(IAsyncResult asyncResult)
         {
-            Socket clientSocket = _socket.EndAccept(asyncResult);
-            if (clientSocket.Connected)
-            {
-                clientSocket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, HandleAcceptedClient, clientSocket);
-                _socket.BeginAccept(AcceptCallback, null);
-            }
+            Socket socket = _socket.EndAccept(asyncResult);
+
+            Console.WriteLine("Client connected");
+            socket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(HandleAcceptedClient), socket);
+            _socket.BeginAccept(new AsyncCallback(AcceptCallback), null);
         }
 
         private static void HandleAcceptedClient(IAsyncResult asyncResult)
         {
             Socket clientSocket = (Socket)asyncResult.AsyncState;
             TcpHandler handler = new TcpHandler(_filepath, _buffer.Length);
+            handler.IsDebugSession = false;
             bool isSendingFileData = false;
 
             if (clientSocket == null)
@@ -85,21 +81,21 @@ namespace DataDrop.Models
                 byte[] databuffer = new byte[lengthReceived];
                 Array.Copy(_buffer, databuffer, lengthReceived);
 
-                string rawRequest = Encoding.ASCII.GetString(databuffer).ToUpper();
+                string rawRequest = Encoding.ASCII.GetString(databuffer);
 
                 handler.ProcessData(rawRequest);
 
                 // Check which path & method was sent
-                if (handler.GetMethod() == AllowedMethods.GET && handler.GetPath() == AllowedPaths.SendData)
+                if (handler.GetPath() == AllowedPaths.SendData)
                 {
                     
                     isSendingFileData = true;
                 }
-                else if (handler.GetMethod() == AllowedMethods.GET && handler.GetPath() == AllowedPaths.DataInformation)
+                else if (handler.GetPath() == AllowedPaths.DataInformation)
                 {
                     handler.DataInformationJSON();
                 }
-                else if (handler.GetMethod() == AllowedMethods.GET && handler.GetPath() == AllowedPaths.ClientFinsihed)
+                else if (handler.GetPath() == AllowedPaths.ClientFinsihed)
                 {
                     handler.ClientFinished();
                 }
@@ -112,18 +108,14 @@ namespace DataDrop.Models
                 handler.CreateResponseHeader();
                 // make header ready for sending back
                 byte[] replyData = new byte[_buffer.Length];
+                replyData = Encoding.ASCII.GetBytes(handler.GetResponseHeader());
                 if (isSendingFileData)
                 {
                     replyData = handler.SendData();
                 }
-                else
-                {
-                    replyData = Encoding.ASCII.GetBytes(handler.GetResponseHeader());
-                }
                
-                clientSocket.BeginSend(replyData, 0, replyData.Length, SocketFlags.None, SendCallback, clientSocket);
-                Console.WriteLine($"Sending Back: {handler.GetResponseHeader()}");
-
+                clientSocket.BeginSend(replyData, 0, replyData.Length, SocketFlags.None, new AsyncCallback(SendCallback), clientSocket);
+                clientSocket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(HandleAcceptedClient), clientSocket);
             }
             catch (Exception e)
             {
@@ -136,8 +128,6 @@ namespace DataDrop.Models
         {
             Socket clientSocket = (Socket) asyncResult.AsyncState;
             clientSocket?.EndSend(asyncResult);
-            clientSocket?.Shutdown(SocketShutdown.Both);
-            clientSocket?.Close();
         }
     }
 }

@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataDrop.BusinessLayer", "D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataDrop.Models", "DataDrop.Models\DataDrop.Models.csproj", "{0288A9DD-CA68-4358-8A0A-0F8BDA0D63C1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataDrop.Test", "DataDrop.Test\DataDrop.Test.csproj", "{10DE46B5-DDB1-459E-8402-1814C6452BBF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataDrop.Test", "DataDrop.Test\DataDrop.Test.csproj", "{10DE46B5-DDB1-459E-8402-1814C6452BBF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataDrop.CliDownloadClient", "DataDrop.CliDownloadClient\DataDrop.CliDownloadClient.csproj", "{5333E613-FF57-4D98-9012-E868E31C0783}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{10DE46B5-DDB1-459E-8402-1814C6452BBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10DE46B5-DDB1-459E-8402-1814C6452BBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10DE46B5-DDB1-459E-8402-1814C6452BBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5333E613-FF57-4D98-9012-E868E31C0783}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5333E613-FF57-4D98-9012-E868E31C0783}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5333E613-FF57-4D98-9012-E868E31C0783}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5333E613-FF57-4D98-9012-E868E31C0783}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

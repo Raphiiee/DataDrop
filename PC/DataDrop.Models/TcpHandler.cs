@@ -12,6 +12,8 @@ namespace DataDrop.Models
 {
     public class TcpHandler
     {
+        public bool IsDebugSession { get; set; }
+        private string _debugData { get; set; }
         private ResponseContext _response;
         private RequestContext _request;
         private string _filepath;
@@ -45,13 +47,7 @@ namespace DataDrop.Models
 
         public void CreateResponseHeader()
         {
-            _response.ContentLength = $"Content-Length: {_response.Message.Length}\n";
-            _response.Header = _response.Version
-                               + _response.Status
-                               + _response.ContentLength
-                               + _response.ContentType
-                               + _response.Charset
-                               + _response.Message;
+            _response.Header = _response.Message;
         }
 
         public void ProcessData(string rawData)
@@ -59,56 +55,41 @@ namespace DataDrop.Models
             _request = default;
             _request.Authorization = "";
             _response = default;
+            _debugData = rawData;
 
-            string[] requestHeader = rawData.Split("\n");
-            // First element in array is a resource methode; second element is a resource path; third HTTP Version
-            string[] resource = requestHeader[0].Split(" ");
+            _response.Message = "Default";
 
-            if (resource[0].Contains("GET"))
+            if (IsDebugSession)
             {
-                _request.Method = AllowedMethods.GET;
-            }
-            else if (resource[0].Contains("PUT"))
-            {
-                _request.Method = AllowedMethods.POST;
-            }
-            else
-            {
-                _request.Method = AllowedMethods.Error;
+                _request.Path = AllowedPaths.Error;
+                return;
             }
 
-            if (resource[1].Contains("DATAINFORMATION"))
+            if (rawData.Contains(AllowedPaths.DataInformation.ToString()))
             {
                 _request.Path = AllowedPaths.DataInformation;
             }
-            else if (resource[1].Contains("SENDDATA"))
+            else if (rawData.Contains(AllowedPaths.SendData.ToString()))
             {
                 _request.Path = AllowedPaths.SendData;
 
-                string[] temp = resource[1].Split('/');
+                string[] temp = rawData.Split("/");
 
-                // temp[2] have length of 3!
-                if (temp.Length > 2)
+                var aaaa = temp.Length; 
+
+                if (temp.Length > 0)
                 {
-                    _request.Resource = temp[2];
+                    _request.Resource = temp[1];
+                }
+                else
+                {
+                    _request.Resource = "Error";
                 }
             }
             else
             {
                 _request.Path = AllowedPaths.Error;
             }
-
-            _request.Header = rawData;
-            if (_request.Header.Contains("{"))
-            {
-                _request.Message = _request.Header[_request.Header.IndexOf("{", StringComparison.Ordinal)..];
-            }
-
-            _response.Version = "HTTP/1.1 ";
-            _response.Status = "200 OK\n";
-            _response.Message = "";
-            _response.ContentType = "Content-Type: text/plain\n";
-            _response.Charset = "Charset: utf-16\n\n";
 
             GetFileInformation();
             if (!_isFileSplit)
@@ -159,6 +140,12 @@ namespace DataDrop.Models
         public void Error(string message = "Wrong Path or Method")
         {
             _response.Status = "403 Forbidde\n";
+
+            if (IsDebugSession)
+            {
+                _response.Message = _debugData;
+                return;
+            }
 
             _response.Message = message;
         }
