@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using DataDrop.MVVM.ViewModel;
 
 namespace DataDrop.MVVM.View
 {
@@ -23,6 +24,8 @@ namespace DataDrop.MVVM.View
         public SendView()
         {
             InitializeComponent();
+            //DataContext = this;
+            
         }
     }
 }

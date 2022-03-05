@@ -1,6 +1,6 @@
 ﻿namespace DataDrop.MVVM.ViewModel
 {
-    public class ReceiveViewModel
+    public class ReceiveViewModel : BaseViewModel
     {
         
     }

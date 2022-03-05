@@ -4,22 +4,35 @@ using DataDrop.Core;
 
 namespace DataDrop.MVVM.ViewModel
 {
-    public class MainViewModel : ObservableObject
+    public class MainViewModel : BaseViewModel
     {
-        private object _currentView;
+        private BaseViewModel _currentView;
+        private string _filePath;
         public OptionsViewModel OptionsVM { get; set; } 
         public ReceiveViewModel ReceiveVM { get; set; } 
         public SendViewModel SendVM { get; set; } 
         public RelayCommand OptionsViewCommand {get; set;}
         public RelayCommand ReceiveViewCommand {get; set;}
         public RelayCommand SendViewCommand {get; set;}
-        public object CurrentView
+        public BaseViewModel CurrentView
         {
             get { return _currentView; }
             set
             {
                 _currentView = value;
-                OnPropertyChanged();
+                RaisePropertyChangedEvent();
+            }
+        }
+        public string FilePath 
+        {
+            get => _filePath;
+            set
+            {
+                if (_filePath != value)
+                {
+                    _filePath = value;
+                    RaisePropertyChangedEvent(nameof(FilePath));
+                }
             }
         }
 

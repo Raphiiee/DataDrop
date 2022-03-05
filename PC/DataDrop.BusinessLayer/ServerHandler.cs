@@ -14,7 +14,7 @@ namespace DataDrop.BusinessLayer
         public bool Status { get; private set; }
         private Task _serverTask;
 
-        public void Start(string filePath = @"G:\Meine Ablage\Studium\BIF6\BA\DataDrop\PC\DataDrop\Images\logo.png", int port = 49153, string  ipAdress = "127.0.0.1")
+        public void Start(string filePath, string  ipAdress,int port)
         {
             _server = new Server(filePath, ipAdress, port);
             Status = true;

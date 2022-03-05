@@ -5,29 +5,50 @@ namespace DataDrop.Core
 {
     public class RelayCommand : ICommand
     {
-        private Action<object> _execute;
-        private Func<object, bool> _canExecute;
+        private readonly Action<object> executeAction;
+        private readonly Predicate<object> canExecutePredicate;
 
-        public bool CanExecute(object parameter)
+        public RelayCommand(Action<object> execute)
+            : this(execute, null)
         {
-            return _canExecute == null || _canExecute(parameter);
         }
 
+        public RelayCommand(Action<object> execute, Predicate<object> canExecute)
+        {
+            if (execute == null)
+            {
+                throw new ArgumentNullException("execute");
+            }
+
+            executeAction = execute;
+            canExecutePredicate = canExecute;
+        }
+
+        /// <summary>
+        /// Defines the method to be called when the command is invoked.
+        /// </summary>
+        /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
         public void Execute(object parameter)
         {
-            _execute(parameter);
+            executeAction(parameter);
+        }
+
+        /// <summary>
+        /// Defines the method that determines whether the command can execute in its current state.
+        /// </summary>
+        /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
+        /// <returns>
+        /// true if this command can be executed; otherwise, false.
+        /// </returns>
+        public bool CanExecute(object parameter)
+        {
+            return canExecutePredicate == null ? true : canExecutePredicate(parameter);
         }
 
         public event EventHandler CanExecuteChanged
         {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
-
-        public RelayCommand(Action<object> execute, Func<object,bool> canExecute = null)
-        {
-            _execute = execute;
-            _canExecute = canExecute;
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
         }
     }
 }
