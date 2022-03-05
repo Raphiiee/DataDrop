@@ -27,7 +27,6 @@ namespace DataDrop.CliDownloadClient
             Console.WriteLine("Connected");
 
             string json = Encoding.ASCII.GetString(GetDataFromServer(AllowedPaths.DataInformation));
-            json = @"{""Filename"":""logo.png"",""FileSize"":63971,""BufferSize"":10000,""SequenzeCount"":6}";
             Console.WriteLine(json);
 
             FileInformation fileInformation = JsonConvert.DeserializeObject<FileInformation>(json);

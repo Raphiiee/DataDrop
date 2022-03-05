@@ -46,14 +46,8 @@ namespace DataDrop.MVVM.ViewModel
             get => _filePath;
             set
             {
-                //maybe this helps https://www.youtube.com/watch?v=hlNdxLzbgWo
                 _filePath = value;
                 RaisePropertyChangedEvent(nameof(FilePath));
-                /*if (_filePath != value) 
-                {
-                    _filePath = value;
-                    RaisePropertyChangedEvent(nameof(FilePath));
-                }*/
             }
         }
 
