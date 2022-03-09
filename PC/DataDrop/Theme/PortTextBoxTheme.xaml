@@ -9,7 +9,7 @@
                             Background="#353340">
                         <Grid>
                             <TextBox Margin="1"
-                                     Text="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                     Text="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
                                      BorderThickness="0"
                                      Background="Transparent"
                                      Foreground="#EEEEEE"

@@ -33,9 +33,11 @@
                     Grid.ColumnSpan="2"
                     Margin="5">
             <TextBox Style="{StaticResource IPTextBoxTheme}"
-                     Margin="40,20"/>
+                     Margin="40,20"
+                     Text="{Binding ClientIp}"/>
             <TextBox Style="{StaticResource PortTextBoxTheme}"
-                     Margin="40,20"/>
+                     Margin="40,20"
+                     Text="{Binding ClientPort, Mode=OneWay}"/>
             
             <TextBlock Text="Progess:"
                        Foreground="#EEEEEE"
@@ -52,6 +54,11 @@
                            Foreground="#EEEEEE"
                            DockPanel.Dock="Right"/>
             </DockPanel>
+
+            <TextBlock Text="{Binding ClientStatus}"
+                       FontSize="15"
+                       Foreground="#EEEEEE"
+                       Margin="40,20"/>
         </StackPanel>
 
         <Button Grid.Row="2"
@@ -60,14 +67,16 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Style="{StaticResource ButtonTheme}"
-                Foreground="#EEEEEE"/>
+                Foreground="#EEEEEE"
+                Command="{Binding ToggleClientCommand}"/>
 
         <TextBox Grid.Row="2" 
                  Grid.Column="0"
                  Grid.ColumnSpan="2"
                  VerticalAlignment="Center"
                  HorizontalAlignment="Center"
-                 Style="{StaticResource ReceiveTextBoxTheme}"/>
+                 Style="{StaticResource ReceiveTextBoxTheme}"
+                 Text="{Binding Filepath}"/>
 
         
 

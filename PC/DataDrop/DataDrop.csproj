@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <None Remove="Images\logo.png" />
+    <None Remove="Images\logoo.ico" />
   </ItemGroup>
 
   <ItemGroup>

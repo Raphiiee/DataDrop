@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Drip Drop Your Data Is On The Flop" Height="450" Width="800"
         Background="#222831"
-        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
         Icon="Images/logo.png">
     <Window.DataContext>
         <viewModel:MainViewModel/>
