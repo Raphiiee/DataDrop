@@ -4,7 +4,7 @@
     {
         SendData = 0,
         DataInformation,
-        ClientFinsihed,
+        ClientFinished,
         Error
     }
 }

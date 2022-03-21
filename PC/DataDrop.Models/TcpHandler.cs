@@ -79,7 +79,7 @@ namespace DataDrop.Models
 
                 if (temp.Length > 0)
                 {
-                    _request.Resource = temp[1];
+                    _request.Resource = temp[2];
                 }
                 else
                 {
@@ -91,11 +91,11 @@ namespace DataDrop.Models
                 _request.Path = AllowedPaths.Error;
             }
 
-            GetFileInformation();
+            /*GetFileInformation();
             if (!_isFileSplit)
             {
                 SplitFile();
-            }
+            }*/
 
         }
 
@@ -104,6 +104,7 @@ namespace DataDrop.Models
             string filename = _filepath.Split(@"\").Last();
 
             _fileInformation.Filename = filename;
+            _fileInformation.FileExtension = filename.Substring(filename.LastIndexOf(".", StringComparison.Ordinal)+1);
             if (_fileInformation.Filename.Length < 1)
             {
                 // throw expection not a file
@@ -139,7 +140,7 @@ namespace DataDrop.Models
 
         public void Error(string message = "Wrong Path or Method")
         {
-            _response.Status = "403 Forbidde\n";
+            _response.Status = "403 Forbidden\n";
 
             if (IsDebugSession)
             {
@@ -156,14 +157,14 @@ namespace DataDrop.Models
             {
                 if (_request.Resource == null)
                 {
-                    return Encoding.ASCII.GetBytes("Error no Resource");
+                    return Encoding.UTF8.GetBytes("Error no Resource");
                 }
 
                 int sequenze = Int32.Parse(_request.Resource);
 
                 if (sequenze > _fileInformation.SequenzeCount)
                 {
-                    return Encoding.ASCII.GetBytes($"Error no Resource with ID '{sequenze}'");
+                    return Encoding.UTF8.GetBytes($"Error no Resource with ID '{sequenze}'");
                 }
                 
                 return _fileBytesList[sequenze];

@@ -9,6 +9,9 @@ namespace DataDrop.Models
         public string Filename { get; set; }
 
         [JsonProperty]
+        public string FileExtension { get; set; }
+
+        [JsonProperty]
         public int FileSize { get; set; }
 
         [JsonProperty]

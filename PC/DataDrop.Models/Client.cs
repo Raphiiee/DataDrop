@@ -39,15 +39,15 @@ namespace DataDrop.Models
 
         private void GetFileInformation()
         {
-            string fileInformationJson = Encoding.ASCII.GetString(GetDataFromServer(AllowedPaths.DataInformation));
+            string fileInformationJson = Encoding.UTF8.GetString(GetDataFromServer(AllowedPaths.DataInformation));
             Console.WriteLine(fileInformationJson);
-
+            fileInformationJson = fileInformationJson.Substring(fileInformationJson.IndexOf("{", StringComparison.Ordinal));
             _fileInformation = JsonConvert.DeserializeObject<FileInformation>(fileInformationJson);
         }
 
         private void GetFileData()
         {
-            for (int i = 0; i <= _fileInformation?.SequenzeCount; i++)
+            for (int i = 0; i < _fileInformation?.SequenzeCount; i++)
             {
                 Console.WriteLine($"Download {i}");
                 _fileBytesList.Add(GetDataFromServer(AllowedPaths.SendData, $"{i}"));
@@ -69,9 +69,9 @@ namespace DataDrop.Models
         private static byte[] GetDataFromServer(AllowedPaths paths, string resource = "")
         {
             var data = new byte[10_000];
-            var dataB = Encoding.ASCII.GetBytes($"{paths}/{resource}");
-            Console.WriteLine($"{paths}/{resource}");
-            _socket.Send(Encoding.ASCII.GetBytes($"{paths}/{resource}"));
+            var dataB = Encoding.UTF8.GetBytes($"GET /{paths}/{resource}/");
+            Console.WriteLine($"GET /{paths}/{resource}/");
+            _socket.Send(Encoding.UTF8.GetBytes($"GET /{paths}/{resource}/"));
 
             byte[] receiveBuffer = new byte[10_000];
             int receive = _socket.Receive(receiveBuffer);

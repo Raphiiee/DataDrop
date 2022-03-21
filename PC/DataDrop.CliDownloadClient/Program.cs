@@ -24,15 +24,16 @@ namespace DataDrop.CliDownloadClient
 
             _clientSocket.Connect(IPAddress.Loopback, 49153);
 
-            Console.WriteLine("Connected");
+            Console.WriteLine("Connected; JSON DECODER!");
 
-            string json = Encoding.ASCII.GetString(GetDataFromServer(AllowedPaths.DataInformation));
+            string json = Encoding.UTF8.GetString(GetDataFromServer(AllowedPaths.DataInformation));
             Console.WriteLine(json);
 
+            json = json.Substring(json.IndexOf("{", StringComparison.Ordinal));
             FileInformation fileInformation = JsonConvert.DeserializeObject<FileInformation>(json);
 
 
-            for (int i = 0; i <= fileInformation?.SequenzeCount; i++)
+            for (int i = 0; i < fileInformation?.SequenzeCount; i++)
             {
                 Console.WriteLine($"Download {i}");
                 fileBytesList.Add(GetDataFromServer(AllowedPaths.SendData, $"{i}"));
@@ -57,17 +58,17 @@ namespace DataDrop.CliDownloadClient
         static byte[] GetDataFromServer(AllowedPaths paths, string resource = "")
         {
             var data = new byte[10_000];
-            var dataB = Encoding.ASCII.GetBytes($"{paths}/{resource}");
-            Console.WriteLine($"{paths}/{resource}");
-            _clientSocket.Send(Encoding.ASCII.GetBytes($"{paths}/{resource}"));
-            //_clientSocket.Send(Encoding.ASCII.GetBytes(Console.Read().ToString()));
+            var dataB = Encoding.UTF8.GetBytes($"GET /{paths}/{resource}");
+            Console.WriteLine($"GET /{paths}/{resource}");
+            _clientSocket.Send(Encoding.UTF8.GetBytes($"GET /{paths}/{resource}/"));
+            //_clientSocket.Send(Encoding.UTF8.GetBytes(Console.Read().ToString()));
 
             byte[] receiveBuffer = new byte[10_000];
             int receive = _clientSocket.Receive(receiveBuffer);
             data = new byte[receive];
             Array.Copy(receiveBuffer, data, receive);
 
-            Console.WriteLine($"Received: {Encoding.ASCII.GetString(data)}");
+            Console.WriteLine($"Received: {Encoding.UTF8.GetString(data)}");
 
             return data;
         }

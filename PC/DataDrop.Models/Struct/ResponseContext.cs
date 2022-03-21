@@ -9,5 +9,8 @@
         public string ContentType;
         public string Charset;
         public string Message;
+        public string Server;
+        public string ContentLanguage;
+        public string Connection;
     }
 }

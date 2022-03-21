@@ -46,7 +46,7 @@ namespace DataDrop.MVVM.ViewModel
             get => _filePath;
             set
             {
-                _filePath = value;
+                _filePath = value.Replace("\"", string.Empty);
                 RaisePropertyChangedEvent(nameof(FilePath));
             }
         }

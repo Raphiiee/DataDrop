@@ -66,6 +66,8 @@ namespace DataDrop.Models
         {
             Socket clientSocket = (Socket)asyncResult.AsyncState;
             TcpHandler handler = new TcpHandler(_filepath, _buffer.Length);
+            handler.GetFileInformation();
+            handler.SplitFile();
             handler.IsDebugSession = false;
             bool isSendingFileData = false;
 
@@ -81,7 +83,7 @@ namespace DataDrop.Models
                 byte[] databuffer = new byte[lengthReceived];
                 Array.Copy(_buffer, databuffer, lengthReceived);
 
-                string rawRequest = Encoding.ASCII.GetString(databuffer);
+                string rawRequest = Encoding.UTF8.GetString(databuffer);
 
                 handler.ProcessData(rawRequest);
 
@@ -95,7 +97,7 @@ namespace DataDrop.Models
                 {
                     handler.DataInformationJSON();
                 }
-                else if (handler.GetPath() == AllowedPaths.ClientFinsihed)
+                else if (handler.GetPath() == AllowedPaths.ClientFinished)
                 {
                     handler.ClientFinished();
                 }
@@ -108,19 +110,22 @@ namespace DataDrop.Models
                 handler.CreateResponseHeader();
                 // make header ready for sending back
                 byte[] replyData = new byte[_buffer.Length];
-                replyData = Encoding.ASCII.GetBytes(handler.GetResponseHeader());
+                var aaaaaaaa = handler.GetResponseHeader();
+                replyData = Encoding.UTF8.GetBytes(handler.GetResponseHeader());
                 if (isSendingFileData)
                 {
                     replyData = handler.SendData();
                 }
-               
+
+
+
                 clientSocket.BeginSend(replyData, 0, replyData.Length, SocketFlags.None, new AsyncCallback(SendCallback), clientSocket);
                 clientSocket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(HandleAcceptedClient), clientSocket);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                throw;
+                //throw;
             }
         }
 

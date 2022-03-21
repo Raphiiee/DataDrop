@@ -35,6 +35,8 @@ KW: 6 Projektstart | Schritt 1-2
 
 
 ## Wichtige Termine
+* 31.03.2022 Status Bericht 1 Abgabe
+* 31.05.2022 Status Bericht 2 Abgabe
 * 26.04.2022 Vorläufige Endversion 
 * 23.05.2022 Abgabe Bachelorarbeit
 * 07.06.2022 Berurteilung/Feedback Berufspraktikum
