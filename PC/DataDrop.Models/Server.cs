@@ -131,8 +131,15 @@ namespace DataDrop.Models
 
         private static void SendCallback(IAsyncResult asyncResult)
         {
-            Socket clientSocket = (Socket) asyncResult.AsyncState;
-            clientSocket?.EndSend(asyncResult);
+            try
+            {
+                Socket clientSocket = (Socket)asyncResult.AsyncState;
+                clientSocket?.EndSend(asyncResult);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
     }
 }

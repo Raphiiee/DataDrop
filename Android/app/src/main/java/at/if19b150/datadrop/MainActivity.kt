@@ -5,6 +5,7 @@ import android.content.Intent
 import android.icu.util.Calendar
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock.sleep
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -13,11 +14,13 @@ import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import org.json.JSONObject
 import java.io.*
 import java.net.InetSocketAddress
+import java.util.concurrent.Executors
 
 
 class MainActivity : AppCompatActivity() {
@@ -61,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         receiveButton.setOnClickListener {
-            GlobalScope.launch(Main) {
+            GlobalScope.launch(IO) {
                 startDownload(ipAddress.text.toString(), port.text.toString().trim().toInt())
             }
         }
@@ -136,16 +139,18 @@ class MainActivity : AppCompatActivity() {
         return FileInformation(jsonRoot.optString("Filename"), jsonRoot.optString("FileExtension"), jsonRoot.getInt("FileSize"), jsonRoot.getInt("BufferSize"))
     }
 
-    private suspend fun getResponseFromSocket(ipAddress : String, port : Int, path : AllowedPaths,  resource : String = "") : ByteArray? {
+    private suspend fun getResponseFromSocket(ipAddress : String, port : Int, path : AllowedPaths, resource : String = "") : ByteArray? {
         try {
             val response = withContext(IO) {
                 // From Here https://ktor.io/docs/servers-raw-sockets.html#client
-                val socket = aSocket(ActorSelectorManager(Dispatchers.IO)).tcp().connect(InetSocketAddress(ipAddress, port))
-                val input = socket.openReadChannel()
-                val output = socket.openWriteChannel(autoFlush = true)
+                val exec = Executors.newCachedThreadPool()
+                val selector = ActorSelectorManager(exec.asCoroutineDispatcher())
+                val socket = aSocket(selector).tcp().connect(InetSocketAddress(ipAddress, port))
+                val input : ByteReadChannel  = socket.openReadChannel()
+                val output: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
 
                 output.writeFully("Get /$path/$resource/".toByteArray())
-                var responseArray = ByteArray(15000)
+                var responseArray = ByteArray(10000)
                 input.readAvailable(responseArray)
                 //println("Server said: '${String(responseArray)}'")
 
@@ -155,6 +160,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             return response
+
 
         } catch (ex : IOException) {
             Log.e("LOG_TAG", "IO Exception: ", ex)

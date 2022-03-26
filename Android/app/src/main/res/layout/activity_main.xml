@@ -16,7 +16,7 @@
         android:layout_marginBottom="25dp"
         android:ems="10"
         android:hint="IP Adress"
-        android:inputType="textPersonName"
+        android:inputType="textNoSuggestions"
         android:minHeight="48dp"
         android:text="10.0.2.2"
         app:layout_constraintBottom_toTopOf="@+id/port"
