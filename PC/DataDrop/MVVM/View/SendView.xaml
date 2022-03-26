@@ -56,7 +56,8 @@
                Grid.ColumnSpan="2"
                VerticalAlignment="Center"
                HorizontalAlignment="Center"
-               Source="../../Images/logo.png"/>
+               Source="{Binding QrCodeImage}">
+        </Image>
 
         <TextBox Grid.Row="2" 
                  Grid.Column="0"

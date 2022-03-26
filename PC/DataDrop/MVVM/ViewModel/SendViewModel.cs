@@ -1,6 +1,10 @@
-﻿using System.ComponentModel.Design;
+﻿using System;
+using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using DataDrop.BusinessLayer;
 using DataDrop.Core;
 
@@ -10,10 +14,12 @@ namespace DataDrop.MVVM.ViewModel
     {
         private ICommand _toggleServerCommand;
         private ServerHandler ServerHandler = new();
+        private QrCodeHandler QrCodeHandler = new();
         private string _serverStatus = "Status: Offline";
         private string _serverIp = "IP: 127.0.0.1";
         private string _serverPort = "Port: 49153";
         private string _filePath;
+        private BitmapImage _qrCodeImage = new BitmapImage(new Uri(@"C:\Users\Raphael\Documents\DataDrop\PC\DataDrop\Images\logo.png"));
         public string ServerStatus 
         {
             get => _serverStatus;
@@ -50,6 +56,22 @@ namespace DataDrop.MVVM.ViewModel
                 RaisePropertyChangedEvent(nameof(FilePath));
             }
         }
+
+        public BitmapImage QrCodeImage
+        {
+            //get => _qrCodeImage;
+            get
+            {
+                QrCodeHandler.CreateQrCodeImage(_serverIp.Substring(_serverIp.IndexOf(' ')).Trim(), Int32.Parse(_serverPort.Substring(_serverPort.IndexOf(' ')).Trim()));
+                _qrCodeImage = QrCodeHandler.QrCodeImage;
+                return _qrCodeImage;
+            }
+            set
+            {
+                _qrCodeImage = value;
+                RaisePropertyChangedEvent();
+            }
+        } 
 
         public ICommand ToggleServerCommand => _toggleServerCommand ??= new RelayCommand(ToggleServer);
         private void ToggleServer(object commandParameter)
