@@ -15,4 +15,6 @@ class FileInformation(var Filename : String, var FileExtension : String, var Fil
         SequenzeCount = value
     }
 
+    var FileData = mutableListOf<ByteArray?>()
+
 }

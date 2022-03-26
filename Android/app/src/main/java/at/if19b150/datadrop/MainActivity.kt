@@ -25,7 +25,9 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     var debugTextView : TextView? = null
-    var fileData = mutableListOf<ByteArray?>()
+    var receiveButton : Button? = null
+    var fileInformation = FileInformation("", "", 1, 1)
+    var serverInformation = ServerInformation("", 0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,37 +37,32 @@ class MainActivity : AppCompatActivity() {
         val port = findViewById<EditText>(R.id.port)
         val isSending = findViewById<RadioButton>(R.id.sending)
         val isReceiving = findViewById<RadioButton>(R.id.receive)
-        val receiveButton = findViewById<Button>(R.id.receivingButton)
         val sendButton = findViewById<Button>(R.id.sendingButton)
         val qrScannPicture = findViewById<ImageView>(R.id.qrScanner)
         val qrScannPicture2 = findViewById<ImageView>(R.id.qrScanner2)
         val fileInformation: FileInformation = FileInformation("abc.txt", "txt", 100, 1)
         debugTextView = findViewById<TextView>(R.id.debugTextView)
+        receiveButton = findViewById<Button>(R.id.receivingButton)
 
         isReceiving.setOnClickListener{
             sendButton.isVisible = false
-            receiveButton.isVisible = true
+            receiveButton?.isVisible = true
             qrScannPicture.isVisible = true
             qrScannPicture2.isVisible = true
         }
 
         isSending.setOnClickListener{
             sendButton.isVisible = true
-            receiveButton.isVisible = false
+            receiveButton?.isVisible = false
             qrScannPicture.isVisible = false
             qrScannPicture2.isVisible = false
-
-            fileData.add("1.Line \n".toByteArray())
-            fileData.add("2.Line \n".toByteArray())
-            fileData.add("3.Line \n".toByteArray())
-            fileData.add("4.Line \n".toByteArray())
-
-            createFile(fileInformation)
         }
 
-        receiveButton.setOnClickListener {
-            GlobalScope.launch(IO) {
-                startDownload(ipAddress.text.toString(), port.text.toString().trim().toInt())
+        receiveButton?.setOnClickListener {
+            GlobalScope.launch(Main) {
+                receiveButton?.isEnabled = false;
+                serverInformation = ServerInformation(ipAddress.text.toString(), port.text.toString().trim().toInt())
+                createFile()
             }
         }
     }
@@ -74,40 +71,48 @@ class MainActivity : AppCompatActivity() {
             // The result data contains a URI for the document or directory that
             // the user selected.
             resultData?.data?.also { uri ->
-                alterDocument(uri)
+                GlobalScope.launch {
+                    startDownload(serverInformation, uri)
+                }
             }
         }
     }
 
-    public suspend fun startDownload(ipAddress: String, port: Int) {
-        var fileInformation = getFileInformation(ipAddress, port)
-
-        createFile(fileInformation)
+    public suspend fun startDownload(serverInformation: ServerInformation, uri: Uri) {
 
         for (i in 0..fileInformation.SequenzeCount) {
-            var tempData = getResponseFromSocket(ipAddress, port, AllowedPaths.SendData, i.toString())
-            fileData.add(tempData)
-            println("${Calendar.getInstance().getTime()} Received Packages: $i")
+            var tempData = getResponseFromSocket(serverInformation, AllowedPaths.SendData, i.toString())
+            fileInformation.FileData.add(tempData)
+            if(i%10 == 0) {
+                println("${Calendar.getInstance().getTime()} Received Packages: $i")
+            }
         }
+
+        alterDocument(uri)
     }
 
     private fun alterDocument(uri: Uri){
         try {
-                contentResolver.openFileDescriptor(uri, "w")?.use {
-                    FileOutputStream(it.fileDescriptor).use {
-                        fileData.forEach { data ->
-                            it.write(data)
-                        }
+            contentResolver.openFileDescriptor(uri, "w")?.use {
+                FileOutputStream(it.fileDescriptor).use {
+                    fileInformation.FileData.forEach { data ->
+                        it.write(data)
                     }
+                }
             }
         } catch (e: FileNotFoundException) {
             e.printStackTrace()
         } catch (e: IOException) {
             e.printStackTrace()
+        } finally {
+            GlobalScope.launch(Main) {
+                receiveButton?.isEnabled = true;
+            }
         }
     }
 
-    private fun createFile(fileInformation: FileInformation) {
+    private suspend fun createFile() {
+        fileInformation = getFileInformation(serverInformation)
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/${fileInformation.FileExtension}"
@@ -116,10 +121,10 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(intent, 49153)
     }
 
-    public suspend fun getFileInformation(ipAddress: String, port: Int): FileInformation {
+    public suspend fun getFileInformation(serverInformation: ServerInformation): FileInformation {
         var fileInformation : FileInformation? = null
 
-        var fileInformationJsonData : String? = getResponseFromSocket(ipAddress, port, AllowedPaths.DataInformation)?.decodeToString()
+        var fileInformationJsonData : String? = getResponseFromSocket(serverInformation, AllowedPaths.DataInformation)?.decodeToString()
         var temp = ""
         fileInformationJsonData?.forEach {
             if (it != '\u0000') {
@@ -139,13 +144,13 @@ class MainActivity : AppCompatActivity() {
         return FileInformation(jsonRoot.optString("Filename"), jsonRoot.optString("FileExtension"), jsonRoot.getInt("FileSize"), jsonRoot.getInt("BufferSize"))
     }
 
-    private suspend fun getResponseFromSocket(ipAddress : String, port : Int, path : AllowedPaths, resource : String = "") : ByteArray? {
+    private suspend fun getResponseFromSocket(serverInformation: ServerInformation, path : AllowedPaths, resource : String = "") : ByteArray? {
         try {
             val response = withContext(IO) {
                 // From Here https://ktor.io/docs/servers-raw-sockets.html#client
                 val exec = Executors.newCachedThreadPool()
                 val selector = ActorSelectorManager(exec.asCoroutineDispatcher())
-                val socket = aSocket(selector).tcp().connect(InetSocketAddress(ipAddress, port))
+                val socket = aSocket(selector).tcp().connect(InetSocketAddress(serverInformation.ipAddress, serverInformation.port))
                 val input : ByteReadChannel  = socket.openReadChannel()
                 val output: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
 
