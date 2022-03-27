@@ -26,6 +26,8 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
     var debugTextView : TextView? = null
     var receiveButton : Button? = null
+    var ipAddress : EditText? = null
+    var port : EditText? = null
     var fileInformation = FileInformation("", "", 1, 1)
     var serverInformation = ServerInformation("", 0)
 
@@ -33,14 +35,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val ipAddress = findViewById<EditText>(R.id.ipAdress)
-        val port = findViewById<EditText>(R.id.port)
+        ipAddress = findViewById<EditText>(R.id.ipAdress)
+        port = findViewById<EditText>(R.id.port)
         val isSending = findViewById<RadioButton>(R.id.sending)
         val isReceiving = findViewById<RadioButton>(R.id.receive)
         val sendButton = findViewById<Button>(R.id.sendingButton)
         val qrScannPicture = findViewById<ImageView>(R.id.qrScanner)
         val qrScannPicture2 = findViewById<ImageView>(R.id.qrScanner2)
-        val fileInformation: FileInformation = FileInformation("abc.txt", "txt", 100, 1)
         debugTextView = findViewById<TextView>(R.id.debugTextView)
         receiveButton = findViewById<Button>(R.id.receivingButton)
 
@@ -61,9 +62,19 @@ class MainActivity : AppCompatActivity() {
         receiveButton?.setOnClickListener {
             GlobalScope.launch(Main) {
                 receiveButton?.isEnabled = false;
-                serverInformation = ServerInformation(ipAddress.text.toString(), port.text.toString().trim().toInt())
+                serverInformation = ServerInformation(ipAddress?.text.toString(), port?.text.toString().trim().toInt())
                 createFile()
             }
+        }
+
+        qrScannPicture.setOnClickListener {
+            val intent = Intent(this, QRCodeActivity::class.java)
+            startActivityForResult(intent, 15)
+        }
+
+        qrScannPicture2.setOnClickListener {
+            val intent = Intent(this, QRCodeActivity::class.java)
+            startActivityForResult(intent, 15)
         }
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
@@ -76,6 +87,19 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        if (requestCode == 15 && resultCode == Activity.RESULT_OK) {
+            var jsonHostData = resultData?.extras?.getString("result") ?: ""
+            val jsonRoot = JSONObject(jsonHostData)
+            var hostInformation = HostInformation(jsonRoot.optString("IpAddress"),
+                                                  jsonRoot.getInt("Port"),
+                                                  jsonRoot.optBoolean("IsSsidOn"),
+                                                  jsonRoot.optString("SsidName"),
+                                                  jsonRoot.optString("SsidPassword"),
+                                                  jsonRoot.optString("SsidNetworkIpAddress"),)
+            ipAddress?.setText(hostInformation.IpAddress)
+            port?.setText(hostInformation.Port.toString())
+        }
+
     }
 
     public suspend fun startDownload(serverInformation: ServerInformation, uri: Uri) {

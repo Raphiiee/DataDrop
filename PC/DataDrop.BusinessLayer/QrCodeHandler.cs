@@ -15,12 +15,16 @@ namespace DataDrop.BusinessLayer
 
         public void CreateQrCodeImage(string ipAddress, int port)
         {
-            ServerInformation serverInformation = new ServerInformation();
-            serverInformation.IpAddress = ipAddress;
-            serverInformation.Port = port;
+            HostInformation hostInformation = new HostInformation();
+            hostInformation.IpAddress = ipAddress;
+            hostInformation.Port = port;
+            hostInformation.IsSsidOn = false;
+            hostInformation.SsidName = "";
+            hostInformation.SsidPassword = "";
+            hostInformation.SsidNetworkIpAddress = "";
 
             QRCodeGenerator qrGenerator = new QRCodeGenerator();
-            QRCodeData qrCodeData = qrGenerator.CreateQrCode(JsonConvert.SerializeObject(serverInformation), QRCodeGenerator.ECCLevel.Q);
+            QRCodeData qrCodeData = qrGenerator.CreateQrCode(JsonConvert.SerializeObject(hostInformation), QRCodeGenerator.ECCLevel.Q);
             QRCode qrCode = new QRCode(qrCodeData);
             var qrCodeImage = qrCode.GetGraphic(20);
 
