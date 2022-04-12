@@ -4,9 +4,9 @@
     {
         public string IpAddress;
         public int Port;
-        public bool IsSsidOn;
+        public bool IsWifiDirectOn;
         public string SsidName;
         public string SsidPassword;
-        public string SsidNetworkIpAddress;
+        public string HostIpAddress;
     }
 }

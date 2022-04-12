@@ -1,9 +1,5 @@
 ﻿using System;
-using System.ComponentModel.Design;
-using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using DataDrop.BusinessLayer;
 using DataDrop.Core;
@@ -15,6 +11,7 @@ namespace DataDrop.MVVM.ViewModel
         private ICommand _toggleServerCommand;
         private ServerHandler ServerHandler = new();
         private QrCodeHandler QrCodeHandler = new();
+        private WifiDirectManager wifiDirect = new("DataDrop", "12345678");
         private string _serverStatus = "Status: Offline";
         private string _serverIp = "IP: 127.0.0.1";
         private string _serverPort = "Port: 49153";
@@ -62,7 +59,7 @@ namespace DataDrop.MVVM.ViewModel
             //get => _qrCodeImage;
             get
             {
-                QrCodeHandler.CreateQrCodeImage(_serverIp.Substring(_serverIp.IndexOf(' ')).Trim(), Int32.Parse(_serverPort.Substring(_serverPort.IndexOf(' ')).Trim()));
+                QrCodeHandler.CreateQrCodeImage(_serverIp.Substring(_serverIp.IndexOf(' ')).Trim(), Int32.Parse(_serverPort.Substring(_serverPort.IndexOf(' ')).Trim()), wifiDirect.IsWifiDirectOn, wifiDirect.SsidName, wifiDirect.SsidPassword, "198.168.137.1");
                 _qrCodeImage = QrCodeHandler.QrCodeImage;
                 return _qrCodeImage;
             }
@@ -81,11 +78,13 @@ namespace DataDrop.MVVM.ViewModel
             {
                 ServerHandler.Stop();
                 ServerStatus = "Status: Offline";
+                wifiDirect.Stop();
             }
             else
             {
                 ServerStatus = "Status: Online";
                 ServerHandler.Start(FilePath, "127.0.0.1", 49153);
+                wifiDirect.Start();
             }
         }
     }

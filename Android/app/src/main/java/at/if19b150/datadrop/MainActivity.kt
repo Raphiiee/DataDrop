@@ -1,14 +1,24 @@
 package at.if19b150.datadrop
 
+import android.Manifest
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.icu.util.Calendar
 import android.net.Uri
+import android.net.wifi.WpsInfo
+import android.net.wifi.p2p.WifiP2pConfig
+import android.net.wifi.p2p.WifiP2pDevice
+import android.net.wifi.p2p.WifiP2pManager
 import android.os.Bundle
 import android.os.SystemClock.sleep
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.view.isVisible
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -31,6 +41,20 @@ class MainActivity : AppCompatActivity() {
     var fileInformation = FileInformation("", "", 1, 1)
     var serverInformation = ServerInformation("", 0)
 
+    val manager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
+        getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
+    }
+    var channel: WifiP2pManager.Channel? = null
+    var receiver: BroadcastReceiver? = null
+    val intentFilter = IntentFilter().apply {
+        addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+        addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+        addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
+        addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
+    }
+    private val peers = mutableListOf<WifiP2pDevice>()
+    var hostInformation: HostInformation? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -42,8 +66,13 @@ class MainActivity : AppCompatActivity() {
         val sendButton = findViewById<Button>(R.id.sendingButton)
         val qrScannPicture = findViewById<ImageView>(R.id.qrScanner)
         val qrScannPicture2 = findViewById<ImageView>(R.id.qrScanner2)
-        debugTextView = findViewById<TextView>(R.id.debugTextView)
+        val wifiDirectButton = findViewById<Button>(R.id.wifiDirectButton)
         receiveButton = findViewById<Button>(R.id.receivingButton)
+        channel = manager?.initialize(this, mainLooper, null)
+        channel?.also { channel ->
+            receiver = WiFiDirectBroadcastReceiver(manager, channel, this)
+        }
+        discover()
 
         isReceiving.setOnClickListener{
             sendButton.isVisible = false
@@ -65,6 +94,12 @@ class MainActivity : AppCompatActivity() {
                 serverInformation = ServerInformation(ipAddress?.text.toString(), port?.text.toString().trim().toInt())
                 createFile()
             }
+        }
+
+        wifiDirectButton.setOnClickListener {
+            val intent = Intent(this, QRCodeActivity::class.java)
+            startActivityForResult(intent, 16)
+
         }
 
         qrScannPicture.setOnClickListener {
@@ -90,16 +125,39 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 15 && resultCode == Activity.RESULT_OK) {
             var jsonHostData = resultData?.extras?.getString("result") ?: ""
             val jsonRoot = JSONObject(jsonHostData)
-            var hostInformation = HostInformation(jsonRoot.optString("IpAddress"),
-                                                  jsonRoot.getInt("Port"),
-                                                  jsonRoot.optBoolean("IsSsidOn"),
-                                                  jsonRoot.optString("SsidName"),
-                                                  jsonRoot.optString("SsidPassword"),
-                                                  jsonRoot.optString("SsidNetworkIpAddress"),)
-            ipAddress?.setText(hostInformation.IpAddress)
-            port?.setText(hostInformation.Port.toString())
+            hostInformation = HostInformation(jsonRoot.optString("IpAddress"),
+                                              jsonRoot.getInt("Port"),
+                                              jsonRoot.optBoolean("IsSsidOn"),
+                                              jsonRoot.optString("SsidName"),
+                                              jsonRoot.optString("SsidPassword"),
+                                              jsonRoot.optString("HostIpAddress"),)
+            ipAddress?.setText(hostInformation?.IpAddress)
+            port?.setText(hostInformation?.Port.toString())
+        }
+        if (requestCode == 16 && resultCode == Activity.RESULT_OK) {
+            var jsonHostData = resultData?.extras?.getString("result") ?: ""
+            val jsonRoot = JSONObject(jsonHostData)
+            hostInformation = HostInformation(jsonRoot.optString("IpAddress"),
+                                              jsonRoot.getInt("Port"),
+                                              jsonRoot.optBoolean("IsSsidOn"),
+                                              jsonRoot.optString("SsidName"),
+                                              jsonRoot.optString("SsidPassword"),
+                                              jsonRoot.optString("HostIpAddress"),)
+            ipAddress?.setText(hostInformation?.IpAddress)
+            port?.setText(hostInformation?.Port.toString())
+            if (peers.count() >= 1) {
+                connect()
+            }
         }
 
+    }
+
+    fun wifiDirect() {
+        GlobalScope.launch(Main) {
+            receiveButton?.isEnabled = false;
+            serverInformation = ServerInformation(hostInformation?.HostIpAddress.toString(), hostInformation?.Port.toString().trim().toInt())
+            createFile()
+        }
     }
 
     public suspend fun startDownload(serverInformation: ServerInformation, uri: Uri) {
@@ -197,6 +255,103 @@ class MainActivity : AppCompatActivity() {
         } catch (ex : Exception) {
             Log.e("LOG_TAG", "Exception", ex)
             return null
+        }
+    }
+
+    fun discover() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            return
+        }
+        manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+
+            override fun onSuccess() {
+                //Toast.makeText(this@MainActivity, "WIFI Direct found", Toast.LENGTH_SHORT).show()
+                println("discovery started")
+
+            }
+
+            override fun onFailure(reasonCode: Int) {
+                //Toast.makeText(this@MainActivity, "Wifi Direct not found $reasonCode", Toast.LENGTH_SHORT).show()
+                println("discovery not started")
+
+            }
+        })
+    }
+
+    fun connect() {
+        // Picking the first device found on the network.
+        var device = peers[0]
+        peers.forEach {
+            if(it.deviceName.contains("laptop", true)) {
+                device = it
+            }
+        }
+
+        val config = WifiP2pConfig().apply {
+            deviceAddress = device.deviceAddress
+            wps.setup = WpsInfo.PBC
+        }
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        manager?.connect(channel, config, object : WifiP2pManager.ActionListener {
+
+            override fun onSuccess() {
+                // WiFiDirectBroadcastReceiver notifies us. Ignore for now.
+                println("Connected.")
+                wifiDirect()
+            }
+
+            override fun onFailure(reason: Int) {
+                println("Connect failed. Retry. $reason")
+            }
+        })
+    }
+
+    val peerListListener = WifiP2pManager.PeerListListener { peerList ->
+        val refreshedPeers = peerList.deviceList
+        if (refreshedPeers != peers) {
+            peers.clear()
+            peers.addAll(refreshedPeers)
+
+            // If an AdapterView is backed by this data, notify it
+            // of the change. For instance, if you have a ListView of
+            // available peers, trigger an update.
+
+            // Perform any other updates needed based on the new list of
+            // peers connected to the Wi-Fi P2P network.
+        }
+
+        if (peers.isEmpty()) {
+            Log.d("TAG", "No devices found")
+            return@PeerListListener
+        }
+
+    }
+
+    /* register the broadcast receiver with the intent values to be matched */
+    override fun onResume() {
+        super.onResume()
+        receiver?.also { receiver ->
+            registerReceiver(receiver, intentFilter)
+        }
+    }
+
+    /* unregister the broadcast receiver */
+    override fun onPause() {
+        super.onPause()
+        receiver?.also { receiver ->
+            unregisterReceiver(receiver)
         }
     }
 }

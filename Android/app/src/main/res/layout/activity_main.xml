@@ -55,6 +55,19 @@
         tools:ignore="DuplicateClickableBoundsCheck" />
 
     <Button
+        android:id="@+id/wifiDirectButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:text="Wifi Direct"
+        android:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/receivingButton"
+        tools:ignore="DuplicateClickableBoundsCheck" />
+
+    <Button
         android:id="@+id/sendingButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -115,14 +128,5 @@
         app:layout_constraintEnd_toEndOf="@+id/port"
         app:layout_constraintTop_toTopOf="@+id/port"
         app:srcCompat="@drawable/ic_baseline_qr_code_24" />
-
-    <TextView
-        android:id="@+id/debugTextView"
-        android:layout_width="0dp"
-        android:layout_height="100dp"
-        android:text="TextView"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
