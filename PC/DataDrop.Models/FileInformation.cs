@@ -18,16 +18,6 @@ namespace DataDrop.Models
         public int BufferSize { get; set; }
 
         [JsonProperty]
-        public int SequenzeCount {
-            get
-            {
-                if (FileSize > 0 && BufferSize > 0)
-                {
-                    return FileSize / BufferSize;
-                }
-
-                return 0;
-            }
-        }
+        public int SequenzeCount { get; set; }
     }
 }

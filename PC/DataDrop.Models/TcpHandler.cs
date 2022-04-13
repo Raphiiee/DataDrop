@@ -135,6 +135,7 @@ namespace DataDrop.Models
                 _fileBytesList.Add(fileBytesListEntry);
             }
 
+            _fileInformation.SequenzeCount = _fileBytesList.Count;
             _isFileSplit = true;
         }
 
