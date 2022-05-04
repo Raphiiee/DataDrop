@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
+using System.Windows.Media.Animation;
 using DataDrop.Models.Enum;
 using DataDrop.Models.Struct;
 using Newtonsoft.Json;
@@ -18,9 +20,9 @@ namespace DataDrop.Models
         private RequestContext _request;
         private string _filepath;
         private int _bufferSize = 10_000;
-        private List<byte[]> _fileBytesList = new List<byte[]>();
-        private bool _isFileSplit = false;
+        private List<byte[]> _fileBytesList = new ();
         private FileInformation _fileInformation { get; set; }
+        private HashInformation _hashInformation { get; set; }
 
         public TcpHandler(string filepath, int bufferSize)
         {
@@ -28,6 +30,7 @@ namespace DataDrop.Models
             _bufferSize = bufferSize;
             _fileInformation = new FileInformation();
             _fileInformation.BufferSize = _bufferSize;
+            ProcessFileInformation();
         }
 
         public AllowedPaths GetPath()
@@ -53,7 +56,6 @@ namespace DataDrop.Models
         public void ProcessData(string rawData)
         {
             _request = default;
-            _request.Authorization = "";
             _response = default;
             _debugData = rawData;
 
@@ -65,6 +67,14 @@ namespace DataDrop.Models
                 return;
             }
 
+            _request.Resource = -1;
+            string[] temp = rawData.Split("/"); 
+
+            if (temp.Length > 0 && temp[2].Length > 0)
+            {
+                _request.Resource = Int32.Parse(temp[2]);
+            }
+
             if (rawData.Contains(AllowedPaths.DataInformation.ToString()))
             {
                 _request.Path = AllowedPaths.DataInformation;
@@ -72,19 +82,10 @@ namespace DataDrop.Models
             else if (rawData.Contains(AllowedPaths.SendData.ToString()))
             {
                 _request.Path = AllowedPaths.SendData;
-
-                string[] temp = rawData.Split("/");
-
-                var aaaa = temp.Length; 
-
-                if (temp.Length > 0)
-                {
-                    _request.Resource = temp[2];
-                }
-                else
-                {
-                    _request.Resource = "Error";
-                }
+            }
+            else if (rawData.Contains(AllowedPaths.HashInformation.ToString()))
+            {
+                _request.Path = AllowedPaths.HashInformation;
             }
             else
             {
@@ -97,6 +98,36 @@ namespace DataDrop.Models
                 SplitFile();
             }*/
 
+        }
+
+        private void ProcessFileInformation()
+        {
+            GetFileInformation();
+            SplitFile();
+            HashAllSquences();
+        }
+
+        public void HashAllSquences()
+        {
+            _hashInformation = new HashInformation();
+            _hashInformation.HashSequenceDictionary = new Dictionary<int, string>();
+            int k = 0;
+
+            using (HashAlgorithm hashAlgorithm = SHA256.Create())
+            {
+                foreach (var dataArray in _fileBytesList)
+                {
+                    byte[] hashBytes = hashAlgorithm.ComputeHash(dataArray);
+                    StringBuilder hashString = new StringBuilder();  
+                    for (int i = 0; i < hashBytes.Length; i++)  
+                    {  
+                        hashString.Append(hashBytes[i].ToString("x2"));  
+                    } 
+                    _hashInformation.HashSequenceDictionary.TryAdd(k++, hashString.ToString());
+                }
+            }
+
+            _fileInformation.HashSequenceCount = (int) Math.Ceiling(_hashInformation.HashSequenceDictionary.Count / 100d);
         }
 
         public void GetFileInformation()
@@ -135,8 +166,7 @@ namespace DataDrop.Models
                 _fileBytesList.Add(fileBytesListEntry);
             }
 
-            _fileInformation.SequenzeCount = _fileBytesList.Count;
-            _isFileSplit = true;
+            _fileInformation.SequenceCount = _fileBytesList.Count;
         }
 
         public void Error(string message = "Wrong Path or Method")
@@ -156,19 +186,17 @@ namespace DataDrop.Models
         {
             try
             {
-                if (_request.Resource == null)
+                if (_request.Resource == -1)
                 {
                     return Encoding.UTF8.GetBytes("Error no Resource");
                 }
 
-                int sequenze = Int32.Parse(_request.Resource);
-
-                if (sequenze > _fileInformation.SequenzeCount)
+                if (_request.Resource > _fileInformation.SequenceCount)
                 {
-                    return Encoding.UTF8.GetBytes($"Error no Resource with ID '{sequenze}'");
+                    return Encoding.UTF8.GetBytes($"Error no Resource with ID '{_request.Resource}'");
                 }
                 
-                return _fileBytesList[sequenze];
+                return _fileBytesList[_request.Resource];
                 
             }
             catch (Exception e)
@@ -180,19 +208,21 @@ namespace DataDrop.Models
 
         public void DataInformationJSON()
         {
-            // Information for the client;
-            // Filename, size of file [bytes], buffer size [bytes], sequenze count,
-            // later checksums of each sequenze, maybe auto decompress zip [bool]
-
             _response.Message = JsonConvert.SerializeObject(_fileInformation);
         }
 
 
 
-        public void ClientFinished()
+        public void HashInformation()
         {
-            // Stop/Close everything
-            
+
+            if (_request.Resource > _fileInformation.HashSequenceCount)
+            {
+                _response.Message = ($"Error no Resource with ID '{_request.Resource}'");
+                return;
+            }
+            _response.Message = _hashInformation.HashSequenceDictionary[_request.Resource];
+
 
         }
 

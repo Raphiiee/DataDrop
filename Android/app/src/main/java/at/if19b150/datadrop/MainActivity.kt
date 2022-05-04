@@ -14,7 +14,6 @@ import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Bundle
-import android.os.SystemClock.sleep
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -24,12 +23,13 @@ import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
 import java.net.InetSocketAddress
+import java.util.*
 import java.util.concurrent.Executors
 
 
@@ -38,7 +38,8 @@ class MainActivity : AppCompatActivity() {
     var receiveButton : Button? = null
     var ipAddress : EditText? = null
     var port : EditText? = null
-    var fileInformation = FileInformation("", "", 1, 1)
+    var fileInformation = FileInformation("", "", 0, 0, 0, 0)
+    var hashInformation = HashInformation(mutableMapOf())
     var serverInformation = ServerInformation("", 0)
 
     val manager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
@@ -162,9 +163,13 @@ class MainActivity : AppCompatActivity() {
 
     public suspend fun startDownload(serverInformation: ServerInformation, uri: Uri) {
 
-        for (i in 0..fileInformation.SequenzeCount) {
+        for (i in 0..fileInformation.SequenceCount) {
             var tempData = getResponseFromSocket(serverInformation, AllowedPaths.SendData, i.toString())
+            var tempHashData = getResponseFromSocket(serverInformation, AllowedPaths.HashInformation, i.toString())?.decodeToString()
             fileInformation.FileData.add(tempData)
+            if (tempHashData != null) {
+                hashInformation.hashSequenceDictionary.put(i,tempHashData)
+            }
             if(i%10 == 0) {
                 println("${Calendar.getInstance().getTime()} Received Packages: $i")
             }
@@ -172,6 +177,18 @@ class MainActivity : AppCompatActivity() {
 
         alterDocument(uri)
     }
+
+    private suspend fun calculateHash(serverInformation: ServerInformation) {
+        var hashInformationJsonData : String? = getResponseFromSocket(serverInformation, AllowedPaths.HashInformation)?.decodeToString()
+        var temp = ""
+        hashInformationJsonData?.forEach {
+            if (it != '\u0000') {
+                temp += it
+            }
+        }
+    }
+
+
 
     private fun alterDocument(uri: Uri){
         try {
@@ -223,7 +240,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun parseFileInformationResponse(response : String): FileInformation {
         val jsonRoot = JSONObject(response)
-        return FileInformation(jsonRoot.optString("Filename"), jsonRoot.optString("FileExtension"), jsonRoot.getInt("FileSize"), jsonRoot.getInt("BufferSize"))
+        return FileInformation(jsonRoot.optString("Filename"),
+                               jsonRoot.optString("FileExtension"),
+                               jsonRoot.getInt("FileSize"),
+                               jsonRoot.getInt("BufferSize"),
+                               jsonRoot.getInt("SequenceCount"),
+                               jsonRoot.getInt("HashSequenceCount"))
     }
 
     private suspend fun getResponseFromSocket(serverInformation: ServerInformation, path : AllowedPaths, resource : String = "") : ByteArray? {

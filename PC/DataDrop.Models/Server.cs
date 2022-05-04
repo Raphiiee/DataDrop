@@ -19,6 +19,7 @@ namespace DataDrop.Models
         private static string _filepath { get; set; }
         private string _ip { get; set; }
         private int _port { get; set; }
+        private static TcpHandler _handler { get; set; }
 
         public  Server(string filepath, string ip = "127.0.0.1", int port = 49153)
         {
@@ -26,6 +27,9 @@ namespace DataDrop.Models
             _port = port;
             _filepath = filepath;
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _handler = new TcpHandler(_filepath, _buffer.Length);
+            _handler.IsDebugSession = false;
+            // TODO test ob das funkt? D:
         }
 
         public void StopServerListener()
@@ -65,10 +69,6 @@ namespace DataDrop.Models
         private static void HandleAcceptedClient(IAsyncResult asyncResult)
         {
             Socket clientSocket = (Socket)asyncResult.AsyncState;
-            TcpHandler handler = new TcpHandler(_filepath, _buffer.Length);
-            handler.GetFileInformation();
-            handler.SplitFile();
-            handler.IsDebugSession = false;
             bool isSendingFileData = false;
 
             if (clientSocket == null)
@@ -85,36 +85,36 @@ namespace DataDrop.Models
 
                 string rawRequest = Encoding.UTF8.GetString(databuffer);
 
-                handler.ProcessData(rawRequest);
+                _handler.ProcessData(rawRequest);
 
                 // Check which path & method was sent
-                if (handler.GetPath() == AllowedPaths.SendData)
+                if (_handler.GetPath() == AllowedPaths.SendData)
                 {
                     
                     isSendingFileData = true;
                 }
-                else if (handler.GetPath() == AllowedPaths.DataInformation)
+                else if (_handler.GetPath() == AllowedPaths.DataInformation)
                 {
-                    handler.DataInformationJSON();
+                    _handler.DataInformationJSON();
                 }
-                else if (handler.GetPath() == AllowedPaths.ClientFinished)
+                else if (_handler.GetPath() == AllowedPaths.HashInformation)
                 {
-                    handler.ClientFinished();
+                    _handler.HashInformation();
                 }
                 else
                 {
-                    handler.Error();
+                    _handler.Error();
                 }
 
                 // Create header for response
-                handler.CreateResponseHeader();
+                _handler.CreateResponseHeader();
                 // make header ready for sending back
                 byte[] replyData = new byte[_buffer.Length];
-                var aaaaaaaa = handler.GetResponseHeader();
-                replyData = Encoding.UTF8.GetBytes(handler.GetResponseHeader());
+                var aaaaaaaa = _handler.GetResponseHeader();
+                replyData = Encoding.UTF8.GetBytes(_handler.GetResponseHeader());
                 if (isSendingFileData)
                 {
-                    replyData = handler.SendData();
+                    replyData = _handler.SendData();
                 }
 
 

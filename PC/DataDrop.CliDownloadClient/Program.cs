@@ -33,7 +33,7 @@ namespace DataDrop.CliDownloadClient
             FileInformation fileInformation = JsonConvert.DeserializeObject<FileInformation>(json);
 
 
-            for (int i = 0; i < fileInformation?.SequenzeCount; i++)
+            for (int i = 0; i < fileInformation?.SequenceCount; i++)
             {
                 Console.WriteLine($"Download {i}");
                 fileBytesList.Add(GetDataFromServer(AllowedPaths.SendData, $"{i}"));

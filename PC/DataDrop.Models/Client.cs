@@ -47,7 +47,7 @@ namespace DataDrop.Models
 
         private void GetFileData()
         {
-            for (int i = 0; i < _fileInformation?.SequenzeCount; i++)
+            for (int i = 0; i < _fileInformation?.SequenceCount; i++)
             {
                 Console.WriteLine($"Download {i}");
                 _fileBytesList.Add(GetDataFromServer(AllowedPaths.SendData, $"{i}"));

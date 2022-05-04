@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace DataDrop.Models
@@ -18,6 +19,9 @@ namespace DataDrop.Models
         public int BufferSize { get; set; }
 
         [JsonProperty]
-        public int SequenzeCount { get; set; }
+        public int SequenceCount { get; set; }
+
+        [JsonProperty]
+        public int HashSequenceCount { get; set; }
     }
 }
