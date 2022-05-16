@@ -297,47 +297,46 @@ class MainActivity : AppCompatActivity() {
         return FileInformation("", "", 0, 0, 0, 0)
     }
 
-    private suspend fun getResponseFromSocket(serverInformation: ServerInformation, path : AllowedPaths, resource : String = "") : ByteArray? {
-        try {
-            val response = withContext(IO) {
-                val exec = Executors.newCachedThreadPool()
-                val selector = ActorSelectorManager(exec.asCoroutineDispatcher())
-                val socket = aSocket(selector).tcp().connect(InetSocketAddress(serverInformation.ipAddress, serverInformation.port))
-                val input : ByteReadChannel  = socket.openReadChannel()
-                val output: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
+private suspend fun getResponseFromSocket(serverInformation: ServerInformation, path : AllowedPaths, resource : String = "") : ByteArray? {
+    try {
+        val response = withContext(IO) {
+            val exec = Executors.newCachedThreadPool()
+            val selector = ActorSelectorManager(exec.asCoroutineDispatcher())
+            val socket = aSocket(selector).tcp().connect(InetSocketAddress(serverInformation.ipAddress, serverInformation.port))
+            val input : ByteReadChannel  = socket.openReadChannel()
+            val output: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
 
-                output.writeFully("Get /$path/$resource/".toByteArray())
-                var responseArray = ByteArray(10000)
-                input.readAvailable(responseArray)
+            output.writeFully("Get /$path/$resource/".toByteArray())
+            var responseArray = ByteArray(10000)
+            input.readAvailable(responseArray)
 
-                socket.close()
+            socket.close()
 
-                return@withContext responseArray
-            }
-
-            return response
-
-
-        } catch (ex : IOException) {
-            Log.e("LOG_TAG", "IO Exception: ", ex)
-            return null
-        } catch (ex : Exception) {
-            Log.e("LOG_TAG", "Exception", ex)
-            return null
-        } catch (ex: NetworkErrorException) {
-            Log.e("Network Error", "Excption", ex)
-            if (resource.length > 1 && path == AllowedPaths.SendData) {
-                failedDownloadedPackage = resource.toInt()
-            }
-            return null
-        } catch (ex: ConnectException) {
-            Log.e("ConnectException", "Excption", ex)
-            if (resource.length > 1 && path == AllowedPaths.SendData) {
-                failedDownloadedPackage = resource.toInt()
-            }
-            return null
+            return@withContext responseArray
         }
+
+        return response
+
+    } catch (ex : IOException) {
+        Log.e("LOG_TAG", "IO Exception: ", ex)
+        return null
+    } catch (ex : Exception) {
+        Log.e("LOG_TAG", "Exception", ex)
+        return null
+    } catch (ex: NetworkErrorException) {
+        Log.e("Network Error", "Excption", ex)
+        if (resource.length > 1 && path == AllowedPaths.SendData) {
+            failedDownloadedPackage = resource.toInt()
+        }
+        return null
+    } catch (ex: ConnectException) {
+        Log.e("ConnectException", "Excption", ex)
+        if (resource.length > 1 && path == AllowedPaths.SendData) {
+            failedDownloadedPackage = resource.toInt()
+        }
+        return null
     }
+}
 
     fun discover() {
         if (ActivityCompat.checkSelfPermission(

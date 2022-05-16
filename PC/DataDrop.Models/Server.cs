@@ -116,7 +116,7 @@ namespace DataDrop.Models
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                throw;
+                //throw;
             }
         }
 
