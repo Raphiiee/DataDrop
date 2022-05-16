@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Windows.Media.Animation;
 using DataDrop.Models.Enum;
 using DataDrop.Models.Struct;
 using Newtonsoft.Json;
@@ -38,11 +36,6 @@ namespace DataDrop.Models
             return _request.Path;
         }
 
-        public AllowedMethods GetMethod()
-        {
-            return _request.Method;
-        }
-
         public string GetResponseHeader()
         {
             return _response.Header;
@@ -70,7 +63,7 @@ namespace DataDrop.Models
             _request.Resource = -1;
             string[] temp = rawData.Split("/"); 
 
-            if (temp.Length > 0 && temp[2].Length > 0)
+            if (temp.Length > 1 && temp[2].Length > 0)
             {
                 _request.Resource = Int32.Parse(temp[2]);
             }
@@ -85,19 +78,13 @@ namespace DataDrop.Models
             }
             else if (rawData.Contains(AllowedPaths.HashInformation.ToString()))
             {
+                
                 _request.Path = AllowedPaths.HashInformation;
             }
             else
             {
                 _request.Path = AllowedPaths.Error;
             }
-
-            /*GetFileInformation();
-            if (!_isFileSplit)
-            {
-                SplitFile();
-            }*/
-
         }
 
         private void ProcessFileInformation()
@@ -127,7 +114,7 @@ namespace DataDrop.Models
                 }
             }
 
-            _fileInformation.HashSequenceCount = (int) Math.Ceiling(_hashInformation.HashSequenceDictionary.Count / 100d);
+            _fileInformation.HashSequenceCount = _hashInformation.HashSequenceDictionary.Count;
         }
 
         public void GetFileInformation()
@@ -153,7 +140,6 @@ namespace DataDrop.Models
             for (int i = 0; i < (int)Math.Ceiling((double)fileBytes.Length / _bufferSize); i++)
             {
                 byte[] fileBytesListEntry = new byte[_bufferSize];
-                // Calculate remainingBytes for the constrainedCopy
                 int remainingBytes = fileBytes.Length - (i * _bufferSize);
 
                 if (remainingBytes > _bufferSize)
@@ -197,7 +183,6 @@ namespace DataDrop.Models
                 }
                 
                 return _fileBytesList[_request.Resource];
-                
             }
             catch (Exception e)
             {
@@ -211,8 +196,6 @@ namespace DataDrop.Models
             _response.Message = JsonConvert.SerializeObject(_fileInformation);
         }
 
-
-
         public void HashInformation()
         {
 
@@ -222,10 +205,6 @@ namespace DataDrop.Models
                 return;
             }
             _response.Message = _hashInformation.HashSequenceDictionary[_request.Resource];
-
-
         }
-
-
     }
 }

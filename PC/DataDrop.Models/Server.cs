@@ -1,12 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
-using System.Printing;
 using System.Text;
-using System.Threading.Tasks;
 using DataDrop.Models.Enum;
 
 namespace DataDrop.Models
@@ -29,12 +24,10 @@ namespace DataDrop.Models
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _handler = new TcpHandler(_filepath, _buffer.Length);
             _handler.IsDebugSession = false;
-            // TODO test ob das funkt? D:
         }
 
         public void StopServerListener()
         {
-            // Function to stop here
             _socket.Close();
         }
 
@@ -117,15 +110,13 @@ namespace DataDrop.Models
                     replyData = _handler.SendData();
                 }
 
-
-
                 clientSocket.BeginSend(replyData, 0, replyData.Length, SocketFlags.None, new AsyncCallback(SendCallback), clientSocket);
                 clientSocket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(HandleAcceptedClient), clientSocket);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                //throw;
+                throw;
             }
         }
 
