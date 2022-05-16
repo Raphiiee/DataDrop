@@ -1,13 +1,13 @@
 package at.if19b150.datadrop
 
 import android.Manifest
+import android.accounts.NetworkErrorException
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.icu.util.Calendar
 import android.net.Uri
 import android.net.wifi.WpsInfo
 import android.net.wifi.p2p.WifiP2pConfig
@@ -25,11 +25,11 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
+import java.net.ConnectException
 import java.net.InetSocketAddress
-import java.util.*
+import java.security.MessageDigest
 import java.util.concurrent.Executors
 
 
@@ -39,8 +39,12 @@ class MainActivity : AppCompatActivity() {
     var ipAddress : EditText? = null
     var port : EditText? = null
     var fileInformation = FileInformation("", "", 0, 0, 0, 0)
-    var hashInformation = HashInformation(mutableMapOf())
+    var hashInformation = HashInformation(mutableMapOf<Int, String>())
+    var hashComputed = mutableMapOf<Int, String>()
+    var downloadAgain = mutableListOf<Int>()
     var serverInformation = ServerInformation("", 0)
+    var failedDownloadedPackage : Int = 0
+    var resumeUri : Uri? = null
 
     val manager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
         getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
@@ -91,9 +95,13 @@ class MainActivity : AppCompatActivity() {
 
         receiveButton?.setOnClickListener {
             GlobalScope.launch(Main) {
-                receiveButton?.isEnabled = false;
-                serverInformation = ServerInformation(ipAddress?.text.toString(), port?.text.toString().trim().toInt())
-                createFile()
+                if (failedDownloadedPackage > 0 && resumeUri != null) {
+                    startResumeDownload(serverInformation, resumeUri!!)
+                } else {
+                    receiveButton?.isEnabled = false;
+                    serverInformation = ServerInformation(ipAddress?.text.toString(), port?.text.toString().trim().toInt())
+                    createFile()
+                }
             }
         }
 
@@ -113,16 +121,17 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(intent, 15)
         }
     }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
         if (requestCode == 49153 && resultCode == Activity.RESULT_OK) {
-            // The result data contains a URI for the document or directory that
-            // the user selected.
             resultData?.data?.also { uri ->
+                resumeUri = uri
                 GlobalScope.launch {
                     startDownload(serverInformation, uri)
                 }
             }
         }
+
         if (requestCode == 15 && resultCode == Activity.RESULT_OK) {
             var jsonHostData = resultData?.extras?.getString("result") ?: ""
             val jsonRoot = JSONObject(jsonHostData)
@@ -135,6 +144,7 @@ class MainActivity : AppCompatActivity() {
             ipAddress?.setText(hostInformation?.IpAddress)
             port?.setText(hostInformation?.Port.toString())
         }
+
         if (requestCode == 16 && resultCode == Activity.RESULT_OK) {
             var jsonHostData = resultData?.extras?.getString("result") ?: ""
             val jsonRoot = JSONObject(jsonHostData)
@@ -150,7 +160,6 @@ class MainActivity : AppCompatActivity() {
                 connect()
             }
         }
-
     }
 
     fun wifiDirect() {
@@ -161,34 +170,61 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    public suspend fun startDownload(serverInformation: ServerInformation, uri: Uri) {
-
-        for (i in 0..fileInformation.SequenceCount) {
-            var tempData = getResponseFromSocket(serverInformation, AllowedPaths.SendData, i.toString())
-            var tempHashData = getResponseFromSocket(serverInformation, AllowedPaths.HashInformation, i.toString())?.decodeToString()
-            fileInformation.FileData.add(tempData)
-            if (tempHashData != null) {
-                hashInformation.hashSequenceDictionary.put(i,tempHashData)
-            }
-            if(i%10 == 0) {
-                println("${Calendar.getInstance().getTime()} Received Packages: $i")
-            }
+    public suspend fun startResumeDownload(serverInformation: ServerInformation, uri: Uri) {
+        for (i in failedDownloadedPackage..fileInformation.SequenceCount-1) {
+            getResponseFromSocket(serverInformation, AllowedPaths.SendData, i.toString())
+                .let { fileInformation.FileData.add(it) }
         }
 
+        hashManager()
         alterDocument(uri)
     }
 
-    private suspend fun calculateHash(serverInformation: ServerInformation) {
-        var hashInformationJsonData : String? = getResponseFromSocket(serverInformation, AllowedPaths.HashInformation)?.decodeToString()
-        var temp = ""
-        hashInformationJsonData?.forEach {
-            if (it != '\u0000') {
-                temp += it
+    public suspend fun startDownload(serverInformation: ServerInformation, uri: Uri) {
+        for (i in 0..fileInformation.SequenceCount-1) {
+            getResponseFromSocket(serverInformation, AllowedPaths.SendData, i.toString())
+                .let { fileInformation.FileData.add(it) }
+        }
+
+        hashManager()
+        alterDocument(uri)
+    }
+
+    private suspend fun hashManager() {
+        getHash()
+        calculateHash()
+        compareHash()
+        replaceFileData()
+    }
+
+    private suspend fun getHash() {
+        for (i in 0..fileInformation.HashSequenceCount-1) {
+            getResponseFromSocket(serverInformation, AllowedPaths.HashInformation, i.toString())?.decodeToString()
+                ?.let { hashInformation.hashSequenceDictionary.put(i, it.replace("\u0000".toRegex(), "")) }
+        }
+    }
+
+    private fun calculateHash() {
+        for (i in 0..fileInformation.SequenceCount-1) {
+            val md = MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(fileInformation.FileData[i])
+            hashComputed.put(i, digest.fold("", { str, it -> str + "%02x".format(it)}))
+        }
+    }
+
+    private fun compareHash() {
+        for (i in 0..fileInformation.SequenceCount-1) {
+            if (hashInformation.hashSequenceDictionary[i] != hashComputed[i]) {
+                downloadAgain.add(i)
             }
         }
     }
 
-
+    private suspend fun replaceFileData() {
+        downloadAgain.forEach {
+            fileInformation.FileData[it] = getResponseFromSocket(serverInformation, AllowedPaths.SendData, it.toString())
+        }
+    }
 
     private fun alterDocument(uri: Uri){
         try {
@@ -212,12 +248,21 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun createFile() {
         fileInformation = getFileInformation(serverInformation)
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/${fileInformation.FileExtension}"
-            putExtra(Intent.EXTRA_TITLE, fileInformation.Filename)
+        if(fileInformation.Filename.length > 1)
+        {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/${fileInformation.FileExtension}"
+                putExtra(Intent.EXTRA_TITLE, fileInformation.Filename)
+            }
+            startActivityForResult(intent, 49153)
         }
-        startActivityForResult(intent, 49153)
+        else {
+            GlobalScope.launch(Main) {
+                Toast.makeText(this@MainActivity , "No Meta Data received, please try later again ", Toast.LENGTH_LONG)
+                receiveButton?.isEnabled = true;
+            }
+        }
     }
 
     public suspend fun getFileInformation(serverInformation: ServerInformation): FileInformation {
@@ -239,19 +284,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun parseFileInformationResponse(response : String): FileInformation {
-        val jsonRoot = JSONObject(response)
-        return FileInformation(jsonRoot.optString("Filename"),
-                               jsonRoot.optString("FileExtension"),
-                               jsonRoot.getInt("FileSize"),
-                               jsonRoot.getInt("BufferSize"),
-                               jsonRoot.getInt("SequenceCount"),
-                               jsonRoot.getInt("HashSequenceCount"))
+        if(response.length > 1 )
+        {
+            val jsonRoot = JSONObject(response)
+            return FileInformation(jsonRoot.optString("Filename"),
+                jsonRoot.optString("FileExtension"),
+                jsonRoot.getInt("FileSize"),
+                jsonRoot.getInt("BufferSize"),
+                jsonRoot.getInt("SequenceCount"),
+                jsonRoot.getInt("HashSequenceCount"))
+        }
+        return FileInformation("", "", 0, 0, 0, 0)
     }
 
     private suspend fun getResponseFromSocket(serverInformation: ServerInformation, path : AllowedPaths, resource : String = "") : ByteArray? {
         try {
             val response = withContext(IO) {
-                // From Here https://ktor.io/docs/servers-raw-sockets.html#client
                 val exec = Executors.newCachedThreadPool()
                 val selector = ActorSelectorManager(exec.asCoroutineDispatcher())
                 val socket = aSocket(selector).tcp().connect(InetSocketAddress(serverInformation.ipAddress, serverInformation.port))
@@ -261,7 +309,6 @@ class MainActivity : AppCompatActivity() {
                 output.writeFully("Get /$path/$resource/".toByteArray())
                 var responseArray = ByteArray(10000)
                 input.readAvailable(responseArray)
-                //println("Server said: '${String(responseArray)}'")
 
                 socket.close()
 
@@ -276,6 +323,18 @@ class MainActivity : AppCompatActivity() {
             return null
         } catch (ex : Exception) {
             Log.e("LOG_TAG", "Exception", ex)
+            return null
+        } catch (ex: NetworkErrorException) {
+            Log.e("Network Error", "Excption", ex)
+            if (resource.length > 1 && path == AllowedPaths.SendData) {
+                failedDownloadedPackage = resource.toInt()
+            }
+            return null
+        } catch (ex: ConnectException) {
+            Log.e("ConnectException", "Excption", ex)
+            if (resource.length > 1 && path == AllowedPaths.SendData) {
+                failedDownloadedPackage = resource.toInt()
+            }
             return null
         }
     }

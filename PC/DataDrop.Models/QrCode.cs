@@ -37,7 +37,6 @@ namespace DataDrop.Models
 
                 QrCodeImage = bitmapimage;
             }
-            
         }
     }
 }
