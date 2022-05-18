@@ -6,6 +6,7 @@ namespace DataDrop.BusinessLayer
     {
         private WiFiDirectAdvertisementPublisher _publisher;
         private WiFiDirectAdvertisement _advertisement;
+        private WiFiDirectLegacySettings _legacySettings;
 
         public string SsidName { get; set; }
         public string SsidPassword { get; set; }
@@ -24,6 +25,12 @@ namespace DataDrop.BusinessLayer
             _advertisement = _publisher.Advertisement;
             _advertisement.IsAutonomousGroupOwnerEnabled = true;
 
+            _legacySettings = _advertisement.LegacySettings;
+            _legacySettings.IsEnabled = false;
+            _legacySettings.Ssid = SsidName;
+
+            var passwordCredentials = _legacySettings.Passphrase;
+            passwordCredentials.Password = SsidPassword;
             IsWifiDirectOn = true;
 
             _publisher.Start();
